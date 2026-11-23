@@ -168,6 +168,17 @@ button, input, select { font: inherit; color: inherit; }
 .empty { background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); padding: 24px; text-align: center; color: var(--muted); }
 .more { margin-top: 12px; }
 
+/* Browse tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.tile {
+  display: grid; gap: 4px; align-content: start; padding: 14px; text-decoration: none; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.tile:hover { border-color: var(--accent); }
+.tile-name { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
+.tile-desc { font-size: .86rem; color: var(--muted); }
+.tile-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .82rem; color: var(--muted); margin-top: 4px; }
+
 /* Detail */
 .detail { display: grid; gap: 16px; }
 .detail .back { justify-self: start; }
@@ -204,6 +215,6 @@ button, input, select { font: inherit; color: inherit; }
 @media (max-width: 520px) {
   .top .wrap { gap: 8px; }
   .tabs { order: 3; width: 100%; justify-content: space-between; }
-  .tab { flex: 1; justify-content: center; padding: 6px 8px; }
+  .tab { flex: 1; justify-content: center; padding: 6px 4px; font-size: .84rem; }
   .brand-sub { display: none; }
 }

@@ -40,7 +40,10 @@
 
   var T = {
     en: {
-      sub: "Government schemes, matched to you", tabFor: "For you", tabAll: "All schemes", tabShort: "Shortlist",
+      sub: "Government schemes, matched to you", tabFor: "For you", tabBrowse: "Browse", tabAll: "All schemes", tabShort: "Shortlist",
+      browseTitle: "Browse schemes by group", browseP: "Pick who the scheme is for. The green number shows how many you qualify for with your current profile.",
+      secProf: "By profession", secCat: "By caste category and community", secLife: "By life situation",
+      nSchemes: "{n} schemes", nQualify: "{n} you qualify for", backBrowse: "All groups",
       introH: "Find the government schemes you can apply for",
       introP: "Tell us a little about yourself. We check your profile against the rules of {n} central and state schemes and show what you qualify for, what you need to apply, and where.",
       profile: "Your profile", edit: "Edit", done: "Done", exampleNote: "This is an example profile. Change any answer to see your own matches.",
@@ -81,7 +84,10 @@
       ageRange: "{a}–{b}", agePlus: "{a}+", ageUnder: "under {b}"
     },
     hi: {
-      sub: "सरकारी योजनाएँ, आपके लिए", tabFor: "आपके लिए", tabAll: "सभी योजनाएँ", tabShort: "चुनी हुई",
+      sub: "सरकारी योजनाएँ, आपके लिए", tabFor: "आपके लिए", tabBrowse: "श्रेणियाँ", tabAll: "सभी योजनाएँ", tabShort: "चुनी हुई",
+      browseTitle: "समूह के अनुसार योजनाएँ देखें", browseP: "चुनें कि योजना किसके लिए है। हरी संख्या बताती है कि आपकी मौजूदा प्रोफ़ाइल से आप कितनी योजनाओं के पात्र हैं।",
+      secProf: "व्यवसाय के अनुसार", secCat: "जाति वर्ग और समुदाय के अनुसार", secLife: "जीवन परिस्थिति के अनुसार",
+      nSchemes: "{n} योजनाएँ", nQualify: "{n} के लिए पात्र", backBrowse: "सभी समूह",
       introH: "जानिए आप किन सरकारी योजनाओं के लिए आवेदन कर सकते हैं",
       introP: "अपने बारे में थोड़ी जानकारी दें। हम {n} केंद्रीय और राज्य योजनाओं के नियमों से आपकी प्रोफ़ाइल मिलाकर बताते हैं कि आप किसके पात्र हैं, क्या दस्तावेज़ चाहिए और कहाँ आवेदन करें।",
       profile: "आपकी प्रोफ़ाइल", edit: "बदलें", done: "हो गया", exampleNote: "यह एक उदाहरण प्रोफ़ाइल है। अपनी जानकारी भरें और अपने लिए योजनाएँ देखें।",
@@ -123,7 +129,44 @@
     }
   };
 
+  function has(arr, v) { return !!arr && arr.indexOf(v) >= 0; }
+  function hasCat(e, c) { return has(e.cat, c) || (e.or || []).some(function (o) { return has(o.cat, c); }); }
+  var GROUPS = [
+    { k: "students", sec: "secProf", n: ["Students", "विद्यार्थी"], d: ["Scholarships, fellowships, coaching and education loans", "छात्रवृत्ति, फ़ेलोशिप, कोचिंग और शिक्षा ऋण"],
+      f: function (s) { return s.s === "edu" || has(s.e.occ, "student") && s.s !== "jobs" && s.s !== "biz"; } },
+    { k: "farmers", sec: "secProf", n: ["Farmers & fishers", "किसान और मछुआरे"], d: ["Income support, crop insurance, credit, irrigation and machinery", "आय सहायता, फसल बीमा, ऋण, सिंचाई और कृषि यंत्र"],
+      f: function (s) { return s.s === "agri" || has(s.e.occ, "farmer") || has(s.e.occ, "fisher"); } },
+    { k: "jobseekers", sec: "secProf", n: ["Job seekers & unemployed", "नौकरी ढूँढने वाले और बेरोज़गार"], d: ["Skill training, apprenticeships, internships and unemployment allowance", "कौशल प्रशिक्षण, अप्रेंटिसशिप, इंटर्नशिप और बेरोज़गारी भत्ता"],
+      f: function (s) { return s.s === "jobs" || has(s.e.occ, "unemployed"); } },
+    { k: "workers", sec: "secProf", n: ["Workers, artisans & vendors", "श्रमिक, कारीगर और विक्रेता"], d: ["Pensions, e-Shram, toolkits and small loans", "पेंशन, ई-श्रम, टूलकिट और छोटे ऋण"],
+      f: function (s) { return ["unorganised", "street_vendor", "artisan"].some(function (o) { return has(s.e.occ, o); }); } },
+    { k: "business", sec: "secProf", n: ["Business & self-employed", "व्यवसाय और स्वरोज़गार"], d: ["Loans, subsidies and startup support", "ऋण, सब्सिडी और स्टार्टअप सहायता"],
+      f: function (s) { return s.s === "biz"; } },
+    { k: "sc", sec: "secCat", n: ["Scheduled Castes (SC)", "अनुसूचित जाति (एससी)"], d: ["Scholarships, coaching, fellowships and business loans", "छात्रवृत्ति, कोचिंग, फ़ेलोशिप और व्यवसाय ऋण"],
+      f: function (s) { return hasCat(s.e, "SC"); } },
+    { k: "st", sec: "secCat", n: ["Scheduled Tribes (ST)", "अनुसूचित जनजाति (एसटी)"], d: ["Residential schools, scholarships and loans", "आवासीय स्कूल, छात्रवृत्ति और ऋण"],
+      f: function (s) { return hasCat(s.e, "ST"); } },
+    { k: "obc", sec: "secCat", n: ["Other Backward Classes (OBC)", "अन्य पिछड़ा वर्ग (ओबीसी)"], d: ["PM YASASVI, free coaching, fellowships and loans", "पीएम यशस्वी, मुफ़्त कोचिंग, फ़ेलोशिप और ऋण"],
+      f: function (s) { return hasCat(s.e, "OBC"); } },
+    { k: "minority", sec: "secCat", n: ["Minorities", "अल्पसंख्यक"], d: ["Muslim, Christian, Sikh, Buddhist, Jain and Parsi communities: scholarships and loans", "मुस्लिम, ईसाई, सिख, बौद्ध, जैन और पारसी समुदाय: छात्रवृत्ति और ऋण"],
+      f: function (s) { return !!s.e.minority; } },
+    { k: "low-income", sec: "secCat", n: ["General & EWS (low income)", "सामान्य और ईडब्ल्यूएस (कम आय)"], d: ["Schemes open to every category, based on income or a BPL card", "हर वर्ग के लिए खुली योजनाएँ, आय या बीपीएल कार्ड के आधार पर"],
+      f: function (s) { return !s.e.cat && !s.e.minority && !s.e.or && (!!s.e.bpl || (s.e.inc != null && s.e.inc <= 300000)); } },
+    { k: "women", sec: "secLife", n: ["Women & girls", "महिलाएँ और बालिकाएँ"], d: ["Monthly support, maternity benefits and girls' savings", "मासिक सहायता, मातृत्व लाभ और बेटियों की बचत"],
+      f: function (s) { return s.e.g === "F" || s.s === "women" || !!s.e.daughter; } },
+    { k: "seniors", sec: "secLife", n: ["Senior citizens", "वरिष्ठ नागरिक"], d: ["Pensions, health cover and savings for 60+", "60+ के लिए पेंशन, स्वास्थ्य बीमा और बचत"],
+      f: function (s) { return !!s.e.a && s.e.a[0] >= 60; } },
+    { k: "disability", sec: "secLife", n: ["Persons with disability", "दिव्यांगजन"], d: ["UDID card, pensions, aids and scholarships", "यूडीआईडी कार्ड, पेंशन, उपकरण और छात्रवृत्ति"],
+      f: function (s) { return !!s.e.dis || s.s === "disability"; } },
+    { k: "bpl", sec: "secLife", n: ["BPL / ration card holders", "बीपीएल / राशन कार्ड धारक"], d: ["Free food grains, housing, health cover and gas", "मुफ़्त अनाज, आवास, स्वास्थ्य बीमा और गैस"],
+      f: function (s) { return !!s.e.bpl; } }
+  ];
+  var GROUP = {};
+  GROUPS.forEach(function (g) { GROUP[g.k] = g; });
+
   var SCHEMES = window.SCHEMES || [];
+  var SCHEMES_HI = window.SCHEMES_HI || {};
+  SCHEMES.forEach(function (s) { s.e = s.e || {}; });
   var BY_ID = {};
   SCHEMES.forEach(function (s) { BY_ID[s.id] = s; });
 
@@ -169,6 +212,7 @@
     return "₹" + n.toLocaleString("en-IN");
   }
   function name(s) { return S.lang === "hi" && s.hi ? s.hi : s.n; }
+  function benefit(s) { return S.lang === "hi" && SCHEMES_HI[s.id] ? SCHEMES_HI[s.id] : s.b; }
   function levelLabel(s) { return s.lvl === "C" ? t("central") : L(STATES[s.lvl]); }
 
   /* ------------------------------------------------------------------ */
@@ -227,6 +271,7 @@
   /* Filtering                                                           */
   /* ------------------------------------------------------------------ */
   function matchesFilters(s) {
+    if (S.group && !GROUP[S.group].f(s)) return false;
     if (S.sector && s.s !== S.sector) return false;
     var st = S.profile.state;
     if (S.level === "C" && s.lvl !== "C") return false;
@@ -251,6 +296,8 @@
     var h = (location.hash || "").replace(/^#/, "");
     if (h.indexOf("s-") === 0 && BY_ID[h.slice(2)]) return { view: "detail", id: h.slice(2) };
     if (h === "all") return { view: "all" };
+    if (h === "browse") return { view: "browse" };
+    if (h.indexOf("g-") === 0 && GROUP[h.slice(2)]) return { view: "group", key: h.slice(2) };
     if (h === "shortlist") return { view: "shortlist" };
     return { view: "for-you" };
   }
@@ -278,6 +325,7 @@
     var n = S.shortlist.length;
     document.getElementById("tabs").innerHTML =
       tab("for-you", t("tabFor"), view === "for-you") +
+      tab("browse", t("tabBrowse"), view === "browse" || view === "group") +
       tab("all", t("tabAll"), view === "all") +
       tab("shortlist", t("tabShort") + (n ? ' <span class="count">' + n + "</span>" : ""), view === "shortlist");
     function tab(h, label, on) { return '<a class="tab" href="#' + h + '"' + (on ? ' aria-current="page"' : "") + ">" + label + "</a>"; }
@@ -347,18 +395,21 @@
 
   function renderAll() {
     var r = route();
+    S.group = r.view === "group" ? r.key : "";
     renderTabs(r.view);
     var intro = document.getElementById("intro");
-    intro.hidden = r.view === "detail";
+    intro.hidden = r.view !== "for-you" && r.view !== "all";
     intro.innerHTML = "<h1>" + esc(t("introH")) + "</h1><p>" + esc(t("introP", { n: SCHEMES.length })) + "</p>";
     var c = document.getElementById("content");
     if (r.view === "detail") c.innerHTML = detailView(BY_ID[r.id]);
     else if (r.view === "shortlist") c.innerHTML = shortlistView();
+    else if (r.view === "browse") c.innerHTML = browseView();
+    else if (r.view === "group") c.innerHTML = groupHead(GROUP[r.key]) + toolbar() + '<div id="results">' + allView() + "</div>";
     else c.innerHTML = toolbar() + '<div id="results">' + (r.view === "all" ? allView() : forYouView()) + "</div>";
   }
   function renderResults() {
     var r = route(), box = document.getElementById("results");
-    if (box) box.innerHTML = r.view === "all" ? allView() : forYouView();
+    if (box) box.innerHTML = r.view === "for-you" ? forYouView() : allView();
     else renderAll();
   }
 
@@ -397,7 +448,7 @@
     return '<article class="card">' +
       '<div class="card-top"><span class="status ' + r.status + '">' + esc(t(r.status)) + '</span><span class="badge level">' + esc(levelLabel(s)) + '</span><span class="badge sector">' + esc(L(SECTORS[s.s])) + "</span></div>" +
       '<h3><a href="#s-' + s.id + '">' + esc(name(s)) + "</a>" + (S.lang === "hi" ? '<span class="hi-name">' + esc(s.n) + "</span>" : "") + "</h3>" +
-      '<p class="benefit">' + esc(s.b) + "</p>" +
+      '<p class="benefit">' + esc(benefit(s)) + "</p>" +
       (why ? '<p class="why">' + esc(why) + "</p>" : "") +
       '<div class="card-actions"><a class="btn link" href="#s-' + s.id + '">' + esc(t("details")) + ' →</a>' +
         '<button type="button" class="star" data-star="' + s.id + '" aria-pressed="' + on + '">' + (on ? ICON_STAR : ICON_STAR_O) + esc(on ? t("saved") : t("save")) + "</button></div>" +
@@ -422,11 +473,34 @@
 
   function allView() {
     var order = { yes: 0, maybe: 1, no: 2 };
-    var list = evaluated(SCHEMES.filter(matchesFilters)).filter(function (x) { return !S.hideNo || x.r.status !== "no"; })
+    var list = evaluated(SCHEMES.filter(matchesFilters)).filter(function (x) { return S.group || !S.hideNo || x.r.status !== "no"; })
       .sort(function (a, b) { return order[a.r.status] - order[b.r.status] || byScore(a, b); });
-    var html = '<div class="result-head"><h2>' + esc(t("allTitle")) + '</h2><span class="meta">' + esc(t("allMeta", { n: list.length })) + "</span></div>";
+    var html = '<div class="result-head"><h2>' + esc(S.group ? L(GROUP[S.group].n) : t("allTitle")) + '</h2><span class="meta">' + esc(t("allMeta", { n: list.length })) + "</span></div>";
     if (!list.length) return html + '<div class="empty">' + esc(t("noResults")) + "</div>";
     return html + '<div class="cards">' + list.map(function (x) { return card(x.s, x.r); }).join("") + "</div>";
+  }
+
+  function browseView() {
+    var html = '<div class="result-head"><h2>' + esc(t("browseTitle")) + '</h2></div><p class="note" style="margin:0 0 6px;max-width:65ch">' + esc(t("browseP")) + "</p>";
+    ["secProf", "secCat", "secLife"].forEach(function (sec) {
+      html += '<div class="group-title">' + esc(t(sec)) + '</div><div class="tiles">';
+      GROUPS.filter(function (g) { return g.sec === sec; }).forEach(function (g) {
+        var st = S.profile.state;
+        var inGroup = SCHEMES.filter(function (s) { return g.f(s) && (s.lvl === "C" || !st || s.lvl === st); });
+        var yes = inGroup.filter(function (s) { return evaluate(s).status === "yes"; }).length;
+        html += '<a class="tile" href="#g-' + g.k + '"><span class="tile-name">' + esc(L(g.n)) + "</span>" +
+          '<span class="tile-desc">' + esc(L(g.d)) + "</span>" +
+          '<span class="tile-meta"><span>' + esc(t("nSchemes", { n: inGroup.length })) + "</span>" +
+          (yes ? '<span class="status yes">' + esc(t("nQualify", { n: yes })) + "</span>" : "") + "</span></a>";
+      });
+      html += "</div>";
+    });
+    return html;
+  }
+
+  function groupHead(g) {
+    return '<a class="btn small back" href="#browse" style="margin-bottom:12px">← ' + esc(t("backBrowse")) + "</a>" +
+      '<p class="note" style="margin:0 0 12px;max-width:65ch">' + esc(L(g.d)) + "</p>";
   }
 
   function detailView(s) {
@@ -442,7 +516,7 @@
         '<div class="card-top"><span class="status ' + r.status + '">' + esc(t(r.status)) + '</span><span class="badge level">' + esc(levelLabel(s)) + '</span><span class="badge sector">' + esc(L(SECTORS[s.s])) + "</span></div>" +
         "<h1>" + esc(name(s)) + "</h1>" +
         '<div class="hi-name">' + esc(S.lang === "hi" ? s.n : s.hi) + "</div>" +
-        '<div class="benefit-box">' + esc(s.b) + "</div>" +
+        '<div class="benefit-box">' + esc(benefit(s)) + "</div>" +
         '<div class="actions">' +
           '<button type="button" class="star" data-star="' + s.id + '" aria-pressed="' + on + '">' + (on ? ICON_STAR : ICON_STAR_O) + esc(on ? t("saved") : t("save")) + "</button>" +
           '<a class="btn primary" href="' + esc(s.url) + '" target="_blank" rel="noopener">' + esc(t("apply")) + " ↗</a>" +
